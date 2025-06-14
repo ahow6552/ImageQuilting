@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image
-from minimumCostPathFunc import minimumCostMask 
+from minimumCostPathFunc import minimumCostMask
 
 def Construct(imgArray, blockSize, overlapSize, outSizeX, outSizeY, tolerance):
     imgArray = np.array(imgArray)
@@ -9,7 +9,7 @@ def Construct(imgArray, blockSize, overlapSize, outSizeX, outSizeY, tolerance):
     for i in range(m-blockSize[0]):
         for j in range(n-blockSize[1]):
             #blocks are added to a list
-            blocks.append(imgArray[i:i+blockSize[0],j:j+blockSize[1],:])                              
+            blocks.append(imgArray[i:i+blockSize[0],j:j+blockSize[1],:])
     blocks = np.array(blocks)
     #final image is initialised with elemnts as -1.
     finalImage = np.ones([outSizeX, outSizeY, c])*-1
@@ -34,12 +34,12 @@ def Construct(imgArray, blockSize, overlapSize, outSizeX, outSizeY, tolerance):
             B1StartY = B1EndY-(matchBlock.shape[1])+1
             B1EndX = startX+overlapSize-1
             B1StartX = B1EndX-(matchBlock.shape[0])+1
-            if i == 0:      
+            if i == 0:
                 overlapType = 'v'
                 B1 = finalImage[startX:endX,B1StartY:B1EndY+1,:]
                 #print(B1.shape,matchBlock.shape,'v',B1StartY,B1EndY,startX,startY)
                 mask = minimumCostMask(matchBlock[:,:,0],B1[:,:,0],0,overlapType,overlapSize)
-            elif j == 0:          
+            elif j == 0:
                 overlapType = 'h'
                 B2 = finalImage[B1StartX:B1EndX+1, startY:endY, :]
                 #print(B2.shape,matchBlock.shape,B1StartX,B1EndY)
@@ -65,11 +65,11 @@ def Construct(imgArray, blockSize, overlapSize, outSizeX, outSizeY, tolerance):
             break
     return finalImage
 
-def SSDError(Bi, toFill): 
+def SSDError(Bi, toFill):
     error = np.sum(((toFill+0.99)>0.1)*(Bi - toFill)*(Bi - toFill))
     return [error]
 
-def MatchBlock(blocks, toFill, blockSize, tolerance):   
+def MatchBlock(blocks, toFill, blockSize, tolerance):
     error = []
     [m,n,p] = toFill.shape
     bestBlocks = []
