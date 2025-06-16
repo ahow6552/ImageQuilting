@@ -94,10 +94,7 @@ import numpy as np
 #     return ref_mask
 
 def minimumCostPathOnArray(arr):
-    """
-    Given a 2D numpy array `arr`, returns a binary mask indicating the optimal
-    top-down minimum-cost path. Used in texture quilting seam computation.
-    """
+
     arr = np.array(arr, dtype=np.float32)
     rows, cols = arr.shape
     cost = arr.copy()
@@ -125,16 +122,9 @@ def minimumCostPathOnArray(arr):
         arr_mask[i, :path[i]] = 0  # left of seam = 0
 
     return arr_mask
+##my
+def minimumCostMask(Ref, B1, B2, overlap_type, overlap_size):
 
-def minimumCostMask(Ref, B1, B2, overlap_type, overlap_size):##自己修改
-    """
-    Generates a binary mask for seamless texture stitching using minimum cost paths.
-    Ref, B1, B2: image blocks as NumPy arrays (assumed grayscale or single-channel).
-    overlap_type: 'v' (vertical), 'h' (horizontal), or 'b' (both)
-    overlap_size: number of overlapping pixels
-    Returns:
-        ref_mask: mask same shape as Ref, where 1 means keep Ref pixel, 0 means take from existing
-    """
     ref_mask = np.ones_like(Ref,dtype=np.float32)
 
     if overlap_type == 'v':
