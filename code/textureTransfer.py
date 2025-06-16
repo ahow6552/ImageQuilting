@@ -84,17 +84,17 @@ def Construct(textureImgArray, targetImgArray, blockSize, overlapSize, alpha, to
             break
     return finalImage
 
-def SSDError(Bi, toFill, targetBlock, alpha):
-    [m,n,p] = toFill.shape
-    #blocks to be searched are cropped to the size of empty location
-    Bi = Bi[0:m,0:n,0:p]
-    #Locations where toFill+1 gives 0 are those where any data is not stored yet. Only those which give greater than 1 are compared for best fit.
-    # print(Bi.shape, toFill.shape, targetBlock.shape)
-    lum_Bi = np.sum(Bi, axis = 2)*1.0/3
-    lum_target = np.sum(targetBlock, axis = 2)*1.0/3
-    lum_toFill = np.sum(toFill, axis = 2)*1.0/3
-    error = alpha*np.sqrt(np.sum(((toFill+0.99)>0.1)*(Bi - toFill)*(Bi - toFill))) + (1-alpha)*np.sqrt(np.sum(((lum_toFill+0.99)>0.1)*(lum_Bi - lum_target)*(lum_Bi - lum_target)))
-    return [error]
+# def SSDError(Bi, toFill, targetBlock, alpha):
+#     [m,n,p] = toFill.shape
+#     #blocks to be searched are cropped to the size of empty location
+#     Bi = Bi[0:m,0:n,0:p]
+#     #Locations where toFill+1 gives 0 are those where any data is not stored yet. Only those which give greater than 1 are compared for best fit.
+#     # print(Bi.shape, toFill.shape, targetBlock.shape)
+#     lum_Bi = np.sum(Bi, axis = 2)*1.0/3
+#     lum_target = np.sum(targetBlock, axis = 2)*1.0/3
+#     lum_toFill = np.sum(toFill, axis = 2)*1.0/3
+#     error = alpha*np.sqrt(np.sum(((toFill+0.99)>0.1)*(Bi - toFill)*(Bi - toFill))) + (1-alpha)*np.sqrt(np.sum(((lum_toFill+0.99)>0.1)*(lum_Bi - lum_target)*(lum_Bi - lum_target)))
+#     return [error]
 # def SSDError(Bi, toFill, targetBlock, alpha, beta=0.1):##修改版
 #     [m, n, p] = toFill.shape
 #     Bi = Bi[0:m, 0:n, 0:p]
@@ -124,50 +124,50 @@ def SSDError(Bi, toFill, targetBlock, alpha):
 #     error = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
 
 #     return [error]
-# def SSDError(blocks, toFill, targetBlock, alpha, beta=0.1):
-#     B, m, n, p = blocks.shape
-#     lum_toFill = np.mean(toFill, axis=2)
-#     lum_target = np.mean(targetBlock, axis=2)
-#     edge_target = sobel(lum_target)
+def SSDError(blocks, toFill, targetBlock, alpha, beta=0.1):
+    B, m, n, p = blocks.shape
+    lum_toFill = np.mean(toFill, axis=2)
+    lum_target = np.mean(targetBlock, axis=2)
+    edge_target = sobel(lum_target)
 
-#     mask = (lum_toFill + 0.99) > 0.1
-#     mask3d = np.expand_dims(mask, axis=2)
+    mask = (lum_toFill + 0.99) > 0.1
+    mask3d = np.expand_dims(mask, axis=2)
 
 
-#     diff = blocks - toFill
-#     err_overlap = np.sum((diff ** 2) * mask3d, axis=(1, 2, 3))
+    diff = blocks - toFill
+    err_overlap = np.sum((diff ** 2) * mask3d, axis=(1, 2, 3))
 
-#     lum_blocks = np.mean(blocks, axis=3)
-#     lum_diff = (lum_blocks - lum_target) ** 2
-#     err_luminance = np.sum(lum_diff * mask, axis=(1, 2))
+    lum_blocks = np.mean(blocks, axis=3)
+    lum_diff = (lum_blocks - lum_target) ** 2
+    err_luminance = np.sum(lum_diff * mask, axis=(1, 2))
 
-#     edge_blocks = np.array([sobel(lum_blocks[i]) for i in range(B)])
-#     edge_diff = (edge_blocks - edge_target) ** 2
-#     err_edge = np.sum(edge_diff * mask, axis=(1, 2))
+    edge_blocks = np.array([sobel(lum_blocks[i]) for i in range(B)])
+    edge_diff = (edge_blocks - edge_target) ** 2
+    err_edge = np.sum(edge_diff * mask, axis=(1, 2))
 
-#     total_err = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
+    total_err = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
 
-#     return total_err
+    return total_err
 
-def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance):
-    error = []
-    [m,n,p] = toFill.shape
-    bestBlocks = []
-    # count = 0
-    for i in range(blocks.shape[0]):
-        #blocks to be searched are cropped to the size of empty location
-        Bi = blocks[i,:,:,:]
-        Bi = Bi[0:m,0:n,0:p]
-        error.append(SSDError(Bi, toFill, targetBlock, alpha))##新增beta項
-    minVal = np.min(error)
-    bestBlocks = [block[:m, :n, :p] for i, block in enumerate(blocks) if error[i] <= (1.0+tolerance)*minVal]
-    # for i in range(blocks.shape[0]):
-    #     if error[i] <= (1.0+tolerance)*minVal:
-    #         block = blocks[i,:,:,:]
-    #         bestBlocks.append(block[0:m,0:n,0:p])
-    #         count = count+1
-    c = np.random.randint(len(bestBlocks))
-    return bestBlocks[c]
+# def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance):
+#     error = []
+#     [m,n,p] = toFill.shape
+#     bestBlocks = []
+#     # count = 0
+#     for i in range(blocks.shape[0]):
+#         #blocks to be searched are cropped to the size of empty location
+#         Bi = blocks[i,:,:,:]
+#         Bi = Bi[0:m,0:n,0:p]
+#         error.append(SSDError(Bi, toFill, targetBlock, alpha))##新增beta項
+#     minVal = np.min(error)
+#     bestBlocks = [block[:m, :n, :p] for i, block in enumerate(blocks) if error[i] <= (1.0+tolerance)*minVal]
+#     # for i in range(blocks.shape[0]):
+#     #     if error[i] <= (1.0+tolerance)*minVal:
+#     #         block = blocks[i,:,:,:]
+#     #         bestBlocks.append(block[0:m,0:n,0:p])
+#     #         count = count+1
+#     c = np.random.randint(len(bestBlocks))
+#     return bestBlocks[c]
 
 # def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.1, batch_size=200):
 #     m, n, p = toFill.shape
@@ -190,21 +190,21 @@ def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance):
 
 #     return blocks[best_idx, :m, :n, :p]
 
-# def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.1, batch_size=200):
-#     m, n, p = toFill.shape
-#     num_blocks = blocks.shape[0]
-#     errors = []
-#     for start in range(0, num_blocks, batch_size):
-#         end = min(start + batch_size, num_blocks)
-#         batch = blocks[start:end, :m, :n, :p]
-#         batch_errors = SSDError(batch, toFill, targetBlock, alpha, beta)
-#         errors.extend(batch_errors)
-#     errors = np.array(errors)
-#     minVal = np.min(errors)
-#     selected_idxs = np.where(errors <= (1.0 + tolerance) * minVal)[0]
-#     best_idx = np.random.choice(selected_idxs)
+def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.1, batch_size=200):
+    m, n, p = toFill.shape
+    num_blocks = blocks.shape[0]
+    errors = []
+    for start in range(0, num_blocks, batch_size):
+        end = min(start + batch_size, num_blocks)
+        batch = blocks[start:end, :m, :n, :p]
+        batch_errors = SSDError(batch, toFill, targetBlock, alpha, beta)
+        errors.extend(batch_errors)
+    errors = np.array(errors)
+    minVal = np.min(errors)
+    selected_idxs = np.where(errors <= (1.0 + tolerance) * minVal)[0]
+    best_idx = np.random.choice(selected_idxs)
 
-#     return blocks[best_idx, :m, :n, :p]
+    return blocks[best_idx, :m, :n, :p]
 
 # def LoadImage( infilename ) :
 #     img = Image.open(infilename).convert('RGB')
