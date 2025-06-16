@@ -95,35 +95,59 @@ def Construct(textureImgArray, targetImgArray, blockSize, overlapSize, alpha, to
 #     lum_toFill = np.sum(toFill, axis = 2)*1.0/3
 #     error = alpha*np.sqrt(np.sum(((toFill+0.99)>0.1)*(Bi - toFill)*(Bi - toFill))) + (1-alpha)*np.sqrt(np.sum(((lum_toFill+0.99)>0.1)*(lum_Bi - lum_target)*(lum_Bi - lum_target)))
 #     return [error]
-def SSDError(Bi, toFill, targetBlock, alpha, beta=0.3):##自己修改版
-    [m, n, p] = toFill.shape
-    Bi = Bi[0:m, 0:n, 0:p]
+# def SSDError(Bi, toFill, targetBlock, alpha, beta=0.1):##修改版
+#     [m, n, p] = toFill.shape
+#     Bi = Bi[0:m, 0:n, 0:p]
 
-    # 計算亮度（lum = mean RGB）
-    lum_Bi = np.mean(Bi, axis=2)
-    lum_target = np.mean(targetBlock, axis=2)
+#     # 計算亮度（lum = mean RGB）
+#     lum_Bi = np.mean(Bi, axis=2)
+#     lum_target = np.mean(targetBlock, axis=2)
+#     lum_toFill = np.mean(toFill, axis=2)
+
+#     # 計算 edge map（用 Sobel）
+#     edge_Bi = sobel(lum_Bi)
+#     edge_target = sobel(lum_target)
+
+#     # 有效比較區域（已填資料處）
+#     mask = (lum_toFill + 0.99) > 0.1
+#     mask3d = np.expand_dims(mask,axis=2)#擴張維度 2->3
+#     # 拼接誤差（原始區塊 vs toFill）
+#     err_overlap = np.sum(mask3d * (Bi - toFill) ** 2)
+
+#     # 亮度誤差（結構相似度）
+#     err_luminance = np.sum(mask * (lum_Bi - lum_target) ** 2)
+
+#     # 邊緣誤差（紋理相似度）
+#     err_edge = np.sum(mask * (edge_Bi - edge_target) ** 2)
+
+#     # 合併誤差：alpha 控制重疊區、beta 控制亮度 vs 邊緣
+#     error = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
+
+#     return [error]
+def SSDError(blocks, toFill, targetBlock, alpha, beta=0.1):
+    B, m, n, p = blocks.shape
     lum_toFill = np.mean(toFill, axis=2)
-
-    # 計算 edge map（用 Sobel）
-    edge_Bi = sobel(lum_Bi)
+    lum_target = np.mean(targetBlock, axis=2)
     edge_target = sobel(lum_target)
 
-    # 有效比較區域（已填資料處）
     mask = (lum_toFill + 0.99) > 0.1
-    mask3d = np.expand_dims(mask,axis=2)#擴張維度 2->3
-    # 拼接誤差（原始區塊 vs toFill）
-    err_overlap = np.sum(mask3d * (Bi - toFill) ** 2)
+    mask3d = np.expand_dims(mask, axis=2)
 
-    # 亮度誤差（結構相似度）
-    err_luminance = np.sum(mask * (lum_Bi - lum_target) ** 2)
 
-    # 邊緣誤差（紋理相似度）
-    err_edge = np.sum(mask * (edge_Bi - edge_target) ** 2)
+    diff = blocks - toFill
+    err_overlap = np.sum((diff ** 2) * mask3d, axis=(1, 2, 3))
 
-    # 合併誤差：alpha 控制重疊區、beta 控制亮度 vs 邊緣
-    error = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
+    lum_blocks = np.mean(blocks, axis=3)
+    lum_diff = (lum_blocks - lum_target) ** 2
+    err_luminance = np.sum(lum_diff * mask, axis=(1, 2))
 
-    return [error]
+    edge_blocks = np.array([sobel(lum_blocks[i]) for i in range(B)])
+    edge_diff = (edge_blocks - edge_target) ** 2
+    err_edge = np.sum(edge_diff * mask, axis=(1, 2))
+
+    total_err = alpha * err_overlap + (1 - alpha) * ((1 - beta) * err_luminance + beta * err_edge)
+
+    return total_err
 
 # def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance):
 #     error = []
@@ -145,59 +169,42 @@ def SSDError(Bi, toFill, targetBlock, alpha, beta=0.3):##自己修改版
 #     c = np.random.randint(len(bestBlocks))
 #     return bestBlocks[c]
 
+# def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.1, batch_size=200):
+#     m, n, p = toFill.shape
+#     num_blocks = blocks.shape[0]
+#     errors = []
 
-def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.3, batch_size=200):
+#     for start in range(0, num_blocks, batch_size):
+#         end = min(start + batch_size, num_blocks)
+#         batch = blocks[start:end]
+
+#         for i in range(batch.shape[0]):
+#             Bi = batch[i]
+#             err = SSDError(Bi, toFill, targetBlock, alpha, beta)[0]  # 回傳的是 list，要取 index 0
+#             errors.append(err)
+
+#     errors = np.array(errors)
+#     minVal = np.min(errors)
+#     selected_idxs = np.where(errors <= (1.0 + tolerance) * minVal)[0]
+#     best_idx = np.random.choice(selected_idxs)
+
+#     return blocks[best_idx, :m, :n, :p]
+
+def MatchBlock(blocks, toFill, targetBlock, blockSize, alpha, tolerance, beta=0.1, batch_size=200):
     m, n, p = toFill.shape
     num_blocks = blocks.shape[0]
     errors = []
-
-    # 計算 luminance
-    lum_toFill = np.mean(toFill, axis=2)
-    lum_target = np.mean(targetBlock, axis=2)
-    mask = (lum_toFill + 0.99) > 0.1
-
-    # 預先擴展 mask
-    mask3d = np.expand_dims(mask, axis=0)  # shape: (1, m, n)
-    mask3d_rgb = np.repeat(np.expand_dims(mask, axis=2), 3, axis=2)  # shape: (m, n, 3)
-
     for start in range(0, num_blocks, batch_size):
         end = min(start + batch_size, num_blocks)
-        batch = blocks[start:end, :m, :n, :p]  # shape: (B, m, n, p)
-
-        # overlap error
-        overlap_diff = (batch - toFill) ** 2
-        overlap_err = np.sum(overlap_diff * mask3d_rgb, axis=(1, 2, 3))  # shape: (B,)
-
-        # luminance error
-        lum_batch = np.mean(batch, axis=3)  # shape: (B, m, n)
-        lum_diff = (lum_batch - lum_target) ** 2
-        lum_err = np.sum(lum_diff * mask, axis=(1, 2))  # shape: (B,)
-
-        # 合併
-        batch_err = alpha * overlap_err + (1 - alpha) * ((1 - beta) * lum_err)
-        errors.extend(batch_err)
-
+        batch = blocks[start:end, :m, :n, :p]
+        batch_errors = SSDError(batch, toFill, targetBlock, alpha, beta)
+        errors.extend(batch_errors)
     errors = np.array(errors)
     minVal = np.min(errors)
     selected_idxs = np.where(errors <= (1.0 + tolerance) * minVal)[0]
     best_idx = np.random.choice(selected_idxs)
 
     return blocks[best_idx, :m, :n, :p]
-
-
-
-
-
-
-
-
-    # [minError,bestBlock] = SSDError(blocks[0,:,:,:], toFill, targetBlock, alpha)
-    # for i in range(blocks.shape[0]):
-    #     [error,Bi] = SSDError(blocks[i,:,:,:], toFill, targetBlock, alpha)
-    #     if minError > error:
-    #         bestBlock = Bi
-    #         minError = error
-    # return bestBlock
 
 # def LoadImage( infilename ) :
 #     img = Image.open(infilename).convert('RGB')
