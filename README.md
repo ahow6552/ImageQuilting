@@ -8,7 +8,8 @@ Implementation of Texture Synthesis and Texture Transfer using Image Quilting. B
 
 ## Usage
 
-First, clone this repository using `git clone https://github.com/tezansahu/ImageQuilting.git`
+First, clone **Author's** repository using `git clone https://github.com/tezansahu/ImageQuilting.git`
+or **Ours** `https://github.com/ahow6552/ImageQuilting.git`
 
 #### CLI Tool:
 To use the CLI tool associated with our project do the following:
@@ -61,4 +62,4 @@ Disable CORS on your browser (using some extension) and start playing with the a
 
 ***
 <p align='center'>Created with :heart: by <a href="https://www.linkedin.com/in/tezan-sahu/">Tezan Sahu</a>, <a href="https://www.linkedin.com/in/sahasiddharth611/">Siddharth Saha</a> & <a href="https://www.linkedin.com/in/saavi-yadav-7ab61a151/">Saavi Yadav</a></p>
-
+<p align='center'>Edited by 鄭丞皓 涂世豪</p>
